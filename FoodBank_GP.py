@@ -2,17 +2,14 @@ import gurobipy as gp
 import numpy as np
 import pandas as pd
 
-# Specify file path
-#data_path = 'Data_Test.xlsx'
-
 # ##PARAMETERS##
 
 # **Sets**:
 nF = 1
 F = np.arange(1, nF+1) #(Food Banks) i
-nP = 261
+nP = 4#20#228
 P = np.arange(1, nP+1) #(PODs - Points of Distribution) j
-nZ = 98
+nZ = 2#5#96
 Z = np.arange(1, nZ+1) #(Zone centroides) k
 
 # **Data**:
@@ -57,6 +54,9 @@ cF_i = pd.DataFrame([CF])
 cF_i.columns = cF_i.columns + 1 
 cF_i.index = cF_i.index + 1
 
+wt_jk = dPZ_jk/WS
+tt_ij = dFP_ij/TS
+
 # ##MODEL##
 model = gp.Model('Food_Bank') 
 
@@ -77,12 +77,6 @@ nT_ij = {(i, j): model.addVar(vtype = gp.GRB.INTEGER, name = "nT_%d_%d" %(i, j))
 ort_ij = {(i,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ort_%d_%d" %(i,j)) for i in F for j in P}
 # Order placed time (hours) in $P_j$
 opt_ij = {(i,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "opt_%d_%d" %(i,j)) for i in F for j in P}
-# Time (hours) when the amount of food in $P_j$ is zero
-#tP_kj = {(k,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "tP_%d_%d" %(k,j)) for j in P for k in Z}
-# Transportation time (hours) from $F_i$ to $P_j$
-tt_ij = {(i, j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "tt_%d_%d" %(i, j)) for i in F for j in P}
-# Walking time (hours) from $Z_k$ to $P_j$
-wt_jk = {(j, k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "wt_%d_%d" %(j, k)) for j in P for k in Z}
 # Deprivation time (hours) that people in $Z_k$ wait while food is available in $P_j$. Por proporcion de la poblacion servida en ese POD.
 dt_jk = {(j, k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_%d_%d" %(j, k)) for j in P for k in Z}
 # Unloading time (hours) in $P_j$ related to the amount of food received from $F_i$
@@ -96,12 +90,9 @@ dt_ijk = {(i,j,k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_%d_%d_%d" 
 model.update()
 
 # ##CONSTRAINTS##:
-#M = 1000000#0000000000
 M_Z = AFP*PF*np.max(pZ_k)*T*24*100
 M_T = T*24*100
 AFP_PF_pZ_k = AFP*PF*pZ_k
-dPZ_jk_WS = dPZ_jk/WS
-dFP_ij_TS = dFP_ij/TS
 T_hours = T*24
 
 # **Relation between $F_i$, $P_j$, $Z_k$**:
@@ -115,30 +106,22 @@ Pj_sendsFood_Zk = {model.addConstr(gp.quicksum(y_jk[j, k] for k in Z) <= 1, name
 # A Zone $Z_k$ is served by at least one POD $P_j$:
 Zk_receiveFood_Pj = {model.addConstr(gp.quicksum(y_jk[j, k] for j in P) >= 1, name=f'Z{k}_receiveFood_Pj') for k in Z}
 
-#x_ij_y_kj = {model.addConstr(gp.quicksum(x_ij[i, j] for i in F) >= gp.quicksum(y_kj[k, j] for k in Z)) for j in P}
-
-DeprivationTime = {model.addConstr(AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_ij[i,j] for i in F) >= AFP_PF_pZ_k.loc[k].values[0]*dt_jk[j,k] + aPZ_jk[j,k]*y_jk[j,k]) for j in P for k in Z }
+DeprivationTime = {model.addConstr(AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_ij[i,j] for i in F)*y_jk[j,k] == AFP_PF_pZ_k.loc[k].values[0]*dt_jk[j,k]+ aPZ_jk[j,k]) for j in P for k in Z }
 DeprivationTime2 = {model.addConstr(dt_jk[j,k] <= M_T*y_jk[j,k]) for j in P for k in Z }
-DeprivationTime3 = {model.addConstr(dt_jk[j,k] >= gp.quicksum(ut_ij[i,j]*y_jk[j,k] for i in F) + wt_jk[j,k]) for j in P for k in Z }
+DeprivationTime3 = {model.addConstr(dt_jk[j,k] >= gp.quicksum(ut_ij[i,j]*y_jk[j,k] for i in F) + wt_jk.loc[j,k]*y_jk[j,k]) for j in P for k in Z }
 
 # **Food capacity**:
 
 # The amount of food sent from $F_i$ to $P_j$ is related with the capacity of the trucks:
-Fi_sendsFood_Pj_TruckCapacity = {model.addConstr(aFP_ij[i, j] <= x_ij[i, j]*cP_j.loc[j].values[0]) for i in F for j in P}         
-#Fi_sendsFood_Pj_TruckCapacity = {model.addConstr(aFP_ij[i, j] <= x_ij[i, j]*M) for i in F for j in P}  
+Fi_sendsFood_Pj_TruckCapacity = {model.addConstr(aFP_ij[i, j] <= x_ij[i, j]*cP_j.loc[j].values[0]) for i in F for j in P}
 # The amount of food sent from $F_i$ to $P_j$ cannot exceed the capacity of the Food Bank:
 FoodBankCapacity = {model.addConstr(gp.quicksum(aFP_ij[i, j] for j in P) <= cF_i.loc[i].values[0]) for i in F}
 # The amount of food sent from $F_i$ to $P_j$ cannot exceed the capacity of the POD:
-#PODCapacity = {model.addConstr(gp.quicksum(aFP_ij[i, j] for i in F) <= cP_j.loc[j].values[0]) for j in P} 
-# The amount of food that $Z_k$ gets from $P_j$ must be equal to the food that $F_i$ sends to $P_j$:
-#FoodGet_FoodSent = {model.addConstr(gp.quicksum(aFP_ij[i, j]*nT_ij[i,j] for i in F) == gp.quicksum(aPZ_jk[j, k] for k in Z)) for j in P} #MODIFICADA
-FoodGet_FoodSent = {model.addConstr(gp.quicksum(aFP_ij[i, j]*fFP_ij[i,j] for i in F) == gp.quicksum(aPZ_jk[j, k] for k in Z)) for j in P} #MODIFICADA
+FoodGet_FoodSent = {model.addConstr(gp.quicksum(aFP_ij[i, j] for i in F) == gp.quicksum(aPZ_jk[j, k] for k in Z)) for j in P} 
 
 new1 = {model.addConstr(aPZ_jk[j, k] <= M_Z*y_jk[j,k]) for j in P for k in Z}
 
-#FoodDemand = {model.addConstr(gp.quicksum(aPZ_jk[j, k]*nT_ij[i,j] for i in F for j in P) >= y_jk[j,k]*AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_ij[i,j] for i in F)) for j in P for k in Z}
 FoodDemand = {model.addConstr(gp.quicksum(aPZ_jk[j, k]for j in P) >= y_jk[j,k]*AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_ij[i,j] for i in F)) for j in P for k in Z}
-#FoodDemand = {model.addConstr(gp.quicksum(aPZ_jk[j, k]for j in P) >= AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_ij[i,j] for i in F) - (1-y_jk[j,k])*M) for j in P for k in Z}
 
 new6 = {model.addConstr(ort_ij[i,j] <= M_T*x_ij[i,j]) for i in F for j in P}
 
@@ -146,21 +129,15 @@ new3 = {model.addConstr(nT_ij[i,j]*TC >= aFP_ij[i,j]) for i in F for j in P}
 
 new4 = {model.addConstr(gp.quicksum(nT_ij[i,j] for j in P) <= NT_i.loc[i].values[0]) for i in F}
 
-#new5 = {model.addConstr(fFP_ij[i,j] <= M*x_ij[i,j]) for i in F for j in P}
-#new5 = {model.addConstr(fFP_ij[i,j] <= M_T*nT_ij[i,j]) for i in F for j in P}
-
-
-WalkingTime = {model.addConstr(wt_jk[j,k] == dPZ_jk_WS.loc[j,k]*y_jk[j,k]) for j in P for k in Z } 
+new5 = {model.addConstr(fFP_ij[i,j] <= M_T*nT_ij[i,j]) for i in F for j in P}
 
 UnloadingTime = {model.addConstr(ut_ij[i, j] == UR*aFP_ij[i, j]) for i in F for j in P}
 
-TransportationTime = {model.addConstr(tt_ij[i, j] == dFP_ij_TS.loc[i,j]*x_ij[i, j]) for i in F for j in P}
+OrderPlacedTime = {model.addConstr(opt_ij[i,j] + tt_ij.loc[i,j]*x_ij[i,j] <= ort_ij[i,j]) for i in F for j in P}
 
-OrderPlacedTime = {model.addConstr(opt_ij[i,j] + tt_ij[i,j] <= ort_ij[i,j]) for i in F for j in P}
+PlaningTime = {model.addConstr(ort_ij[i,j]*fFP_ij[i,j] >= T_hours*x_ij[i,j]) for i in F for j in P} 
 
-PlaningTime = {model.addConstr(ort_ij[i,j]*fFP_ij[i,j] == T_hours*x_ij[i,j]) for i in F for j in P} 
-
-OrderPlacedTime2 = {model.addConstr(gp.quicksum(opt_ij[i,j] for i in F) >= gp.quicksum(wt_jk[j,k] for k in Z) + gp.quicksum(ut_ij[i,j] for i in F)) for j in P}
+OrderPlacedTime2 = {model.addConstr(gp.quicksum(opt_ij[i,j] for i in F) >= gp.quicksum(wt_jk.loc[j,k]*y_jk[j,k] for k in Z) + gp.quicksum(ut_ij[i,j] for i in F)) for j in P}
 
 new7 = {model.addConstr(opt_ij[i,j] <= M_T*x_ij[i,j]) for i in F for j in P}
 
@@ -171,18 +148,13 @@ ER = 1/2000 # Exchange Rate USD to COP Base on the paper Discrete choice Cantill
 dFP_ij_LCM_LCH_TS = 2*dFP_ij*(LCM+(LCH/TS))
 UR_LCH = UR*LCH
 
-#model.setObjective(gp.quicksum((3066*dt_kj[k,j] + 349.66*(dt_kj[k,j])**2)/ER for j in P for k in Z) + gp.quicksum((aFP_ij[i,j]/TC)*2*dFP_ij.loc[j,i]*LCM_LCH_TS + UR_LCH*aFP_ij[i,j] for i in F for j in P), 
-#model.setObjective(gp.quicksum(ER*(3066*dt_jk[j,k] + 349.66*(dt_jk[j,k])**2) for j in P for k in Z) + gp.quicksum(nT_ij[i,j]*fFP_ij[i,j]*dFP_ij_LCM_LCH_TS.loc[i,j] + UR_LCH*aFP_ij[i,j] for i in F for j in P), 
-#model.setObjective(gp.quicksum(ER*(3066*dt_jk[j,k] + 349.66*(dt_jk[j,k])**2) for j in P for k in Z) + gp.quicksum(nT_ij[i,j]*dFP_ij_LCM_LCH_TS.loc[i,j] + UR_LCH*aFP_ij[i,j] for i in F for j in P), 
 model.setObjective(gp.quicksum(dt_ijk[i,j,k]*ER*(3066 + 349.66*dt_jk[j,k]) for i in F for j in P for k in Z) + gp.quicksum(fFP_ij[i,j]*(nT_ij[i,j]*dFP_ij_LCM_LCH_TS.loc[i,j] + UR_LCH*aFP_ij[i,j]) for i in F for j in P), 
                    gp.GRB.MINIMIZE)
-model.setParam('OutputFlag', 0)
-model.update()
+#model.setParam('OutputFlag', 0)
+#model.update()
 #Optimize (solve the model)
 model.optimize()
 #model.computeIIS()
 #model.write("model.ilp")
-model.write('FoodBank_2.lp')
-model.write("FoodBank_2.sol")
-
-#print('Obj: %g' % model.objVal)
+model.write('FoodBank_SmallCase4P2Z.lp')
+model.write("FoodBank_SmallCase4P2Z.sol")

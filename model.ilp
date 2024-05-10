@@ -1,0 +1,59 @@
+\ Model Food_Bank_copy
+\ LP format - for model browsing. Use MPS format to capture full model detail.
+Minimize
+ 
+Subject To
+ P1_sendsFood_Zk: y_1_1 + y_1_2 <= 1
+ P2_sendsFood_Zk: y_2_1 + y_2_2 <= 1
+ P3_sendsFood_Zk: y_3_1 + y_3_2 <= 1
+ P4_sendsFood_Zk: y_4_1 + y_4_2 <= 1
+ Z2_receiveFood_Pj: y_1_2 + y_2_2 + y_3_2 + y_4_2 >= 1
+ R15: - 24000 y_3_1 + dt_3_1 <= 0
+ R42: - 3.32258064516129 y_1_2 + wt_1_2 = 0
+ R44: - 5.258064516129032 y_2_2 + wt_2_2 = 0
+ R46: - 6.774193548387097 y_3_2 + wt_3_2 = 0
+ R48: - 10.41935483870968 y_4_2 + wt_4_2 = 0
+ R59: - ort_1_3 + opt_1_3 + tt_1_3 <= 0
+ R63: opt_1_3 - wt_3_1 - wt_3_2 - ut_1_3 >= 0
+ R64: opt_1_4 - wt_4_1 - wt_4_2 - ut_1_4 >= 0
+ R68: - 24000 x_1_4 + opt_1_4 <= 0
+ qc0: 936.9094583333335 ort_1_1 + [ - y_1_1 * aFP_1_1
+   - 936.9094583333335 y_1_1 * dt_1_1 ] = 0
+ qc1: 586.2588333333334 ort_1_1 + [ - y_1_2 * aFP_1_1
+   - 586.2588333333334 y_1_2 * dt_1_2 ] = 0
+ qc2: 936.9094583333335 ort_1_2 + [ - y_2_1 * aFP_1_2
+   - 936.9094583333335 y_2_1 * dt_2_1 ] = 0
+ qc3: 586.2588333333334 ort_1_2 + [ - y_2_2 * aFP_1_2
+   - 586.2588333333334 y_2_2 * dt_2_2 ] = 0
+ qc4: 936.9094583333335 ort_1_3 + [ - y_3_1 * aFP_1_3
+   - 936.9094583333335 y_3_1 * dt_3_1 ] = 0
+ qc5: 936.9094583333335 ort_1_4 + [ - y_4_1 * aFP_1_4
+   - 936.9094583333335 y_4_1 * dt_4_1 ] = 0
+ qc6: - wt_1_2 + dt_1_2 + [ - y_1_2 * ut_1_1 ] >= 0
+ qc7: - wt_2_2 + dt_2_2 + [ - y_2_2 * ut_1_2 ] >= 0
+ qc8: - 240 x_1_4 + [ ort_1_4 * fFP_1_4 ] = 0
+Bounds
+ aFP_1_3 free
+ aFP_1_4 free
+ ort_1_1 free
+ ort_1_2 free
+ ort_1_3 free
+ ort_1_4 free
+ opt_1_3 free
+ opt_1_4 free
+ wt_1_2 free
+ wt_2_2 free
+ wt_3_2 free
+ wt_4_2 free
+ dt_1_1 free
+ dt_1_2 free
+ dt_2_1 free
+ dt_2_2 free
+ dt_3_1 free
+ dt_4_1 free
+ fFP_1_4 free
+Binaries
+ x_1_4 y_1_1 y_1_2 y_2_1 y_2_2 y_3_1 y_3_2 y_4_1 y_4_2
+Generals
+ fFP_1_4
+End
