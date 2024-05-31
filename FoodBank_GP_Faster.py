@@ -3,8 +3,7 @@ import numpy as np
 import pandas as pd
 
 # ##PARAMETERS##
-import numpy as np
-P_small_near = np.array([44,198,202,47,197])#199
+P_small_near = np.array([199,198,202,47,197])#44
 Z_small_near = np.array([28,19])
 P_small_far = np.array([25,140,110,196,207])
 Z_small_far = np.array([93,80])
@@ -57,15 +56,15 @@ P_medium_far = np.array([
     110,
     140,
     25])
-Z_medium_far = np.array([63, 67, 68, 80, 93])
+Z_medium_far = np.array([93, 80, 68, 67, 63, 92, 82, 66, 56, 40])
 
 # **Sets**:
 nF = 1
 F = np.arange(1, nF+1) #(Food Banks) i
 nP = 228
-P = np.arange(1, nP+1) #(PODs - Points of Distribution) j
+P = P_medium_near#np.arange(1, nP+1) #(PODs - Points of Distribution) j
 nZ = 96
-Z = np.arange(1, nZ+1) #(Zone centroides) k
+Z = Z_medium_far#np.arange(1, nZ+1) #(Zone centroides) k
 
 # **Data**:
 data_path = 'Final_Data.xlsx'
@@ -102,7 +101,7 @@ UR = 0.00005 # Unloading Rate (Hours/Pound)
 SR = 0.0003 # Setting-up Rate (Hours/Pound)
 LR = 0.00005 # Loading Rate (Hours/Pound)
 
-PF = 0.005#0.1 # % of People requiring Food
+PF = 0.005#0.1 # 0.005#% of People requiring Food
 T = 10 # Period planning time (Days)
 
 # Food Bank $F_i$ capacity (Pounds) Big-M
@@ -121,115 +120,129 @@ M_T = T*24*100
 AFP_PF_pZ_k = AFP*PF*pZ_k
 T_hours = T*24
 
-options = {
-    "WLSACCESSID": "058e9d62-b9f9-418d-86e4-a7145e6660a3",
-    "WLSSECRET": "58a30013-39fb-4857-ad04-c11ba39a6f98",
-    "LICENSEID": 2516598,
-}
-with gp.Env(params=options) as env, gp.Model(env=env) as model:
 
-    # ##MODEL##
-    #model = gp.Model('Food_Bank') 
+# ##MODEL##
+model = gp.Model('Food_Bank') 
 
-    # ##DECISION VARIABLES##:
-    # x_ij if $F_i$ sends food to $P_j$
-    x_ij = {(i, j): model.addVar(vtype = gp.GRB.BINARY, name = "x_%d_%d" %(i, j)) for i in F for j in P}
-    # y_kj if $Z_k$ is served by $P_j$  
-    y_jk = {(j, k): model.addVar(vtype = gp.GRB.BINARY, name = "y_%d_%d" %(j, k)) for j in P for k in Z}
+# ##DECISION VARIABLES##:
+# x_ij if $F_i$ sends food to $P_j$
+x_ij = {(i, j): model.addVar(vtype = gp.GRB.BINARY, name = "x_%d_%d" %(i, j)) for i in F for j in P}
+# y_kj if $Z_k$ is served by $P_j$  
+y_jk = {(j, k): model.addVar(vtype = gp.GRB.BINARY, name = "y_%d_%d" %(j, k)) for j in P for k in Z}
 
-    # Amount of food (pounds) sent from $F_i$ to $P_j$
-    aFP_ij = {(i, j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "aFP_%d_%d" %(i, j)) for i in F for j in P} 
-    # Amount of food (pounds) that $P_j$ can serve to $Z_k$
-    aPZ_jk = {(j, k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "aPZ_%d_%d" %(j, k)) for k in Z for j in P}
-    # Number of trucks sent from $F_i$ to $P_j$
-    nT_ij = {(i, j): model.addVar(vtype = gp.GRB.INTEGER, name = "nT_%d_%d" %(i, j)) for i in F for j in P} 
-    # Order received time (hours) in $P_j$
-    ort_ij = {(i,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ort_%d_%d" %(i,j)) for i in F for j in P}
-    # Order placed time (hours) in $P_j$
-    opt_ij = {(i,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "opt_%d_%d" %(i,j)) for i in F for j in P}
-    # Deprivation time (hours) that people in $Z_k$ wait while food is available in $P_j$. Por proporcion de la poblacion servida en ese POD.
-    dt_jk = {(j, k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_%d_%d" %(j, k)) for j in P for k in Z}
-    # Unloading time (hours) in $P_j$ related to the amount of food received from $F_i$
-    ut_ij = {(i, j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ut_%d_%d" %(i, j)) for i in F for j in P}
-    # Delivery frequency of trucks sent from $F_i$ to $P_j$
-    fFP_ij = {(i, j): model.addVar(vtype = gp.GRB.INTEGER, name = "fFP_%d_%d" %(i, j)) for i in F for j in P}
+# Amount of food (pounds) sent from $F_i$ to $P_j$
+aFP_ij = {(i, j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "aFP_%d_%d" %(i, j)) for i in F for j in P} 
+# Amount of food (pounds) that $P_j$ can serve to $Z_k$
+aPZ_jk = {(j, k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "aPZ_%d_%d" %(j, k)) for k in Z for j in P}
+# Number of trucks sent from $F_i$ to $P_j$
+nT_ij = {(i, j): model.addVar(vtype = gp.GRB.INTEGER, name = "nT_%d_%d" %(i, j)) for i in F for j in P} 
+# Order received time (hours) in $P_j$
+ort_ij = {(i,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ort_%d_%d" %(i,j)) for i in F for j in P}
+# Order placed time (hours) in $P_j$
+opt_ij = {(i,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "opt_%d_%d" %(i,j)) for i in F for j in P}
+# Deprivation time (hours) that people in $Z_k$ wait while food is available in $P_j$. Por proporcion de la poblacion servida en ese POD.
+dt_jk = {(j, k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_%d_%d" %(j, k)) for j in P for k in Z}
+# Unloading time (hours) in $P_j$ related to the amount of food received from $F_i$
+ut_ij = {(i, j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ut_%d_%d" %(i, j)) for i in F for j in P}
+# Delivery frequency of trucks sent from $F_i$ to $P_j$
+fFP_ij = {(i, j): model.addVar(vtype = gp.GRB.INTEGER, name = "fFP_%d_%d" %(i, j)) for i in F for j in P}
 
-    #dt_ijk = {(i,j,k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_%d_%d_%d" %(i,j,k)) for i in F for j in P for k in Z}
-    dt_k = {(k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_%d" %(k)) for k in Z}
-    dtt_k = {(k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dtt_%d" %(k)) for k in Z}
+#dt_ijk = {(i,j,k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_%d_%d_%d" %(i,j,k)) for i in F for j in P for k in Z}
+dt_k = {(k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_%d" %(k)) for k in Z}
+dtt_k = {(k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dtt_%d" %(k)) for k in Z}
 
-    dep_cost = model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dep_cost")
-    log_cost = model.addVar(vtype = gp.GRB.CONTINUOUS, name = "log_cost")
+dep_cost = model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dep_cost")
+log_cost = model.addVar(vtype = gp.GRB.CONTINUOUS, name = "log_cost")
 
-    #Update model (it actully puts everything togeter)
-    model.update()
+#Linearization and Fastest Constraints
+ort_y_ijk = {(i,j,k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ort_y_%d_%d_%d" %(i,j,k)) for i in F for j in P for k in Z}
+ut_y_ijk = {(i,j,k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ut_y_%d_%d_%d" %(i,j,k)) for i in F for j in P for k in Z}
+ort_fFP_ij = {(i,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ort_fFP_%d_%d" %(i,j)) for i in F for j in P}
+ort_fFP_ij1 = {(i,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ort_fFP1_%d_%d" %(i,j)) for i in F for j in P}
+ort_fFP_ij2 = {(i,j): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "ort_fFP2_%d_%d" %(i,j)) for i in F for j in P}
+dt_fFP_ijk = {(i,j,k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_fFP_%d_%d_%d" %(i,j,k)) for i in F for j in P for k in Z}
+dt_fFP_ijk1 = {(i,j,k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_fFP1_%d_%d_%d" %(i,j,k)) for i in F for j in P for k in Z}
+dt_fFP_ijk2 = {(i,j,k): model.addVar(vtype = gp.GRB.CONTINUOUS, name = "dt_fFP2_%d_%d_%d" %(i,j,k)) for i in F for j in P for k in Z}
 
-    # ##CONSTRAINTS##:
+#Update model (it actully puts everything togeter)
+model.update()
 
-    Fi_sendsFood_Pj = {model.addConstr(gp.quicksum(x_ij[i, j] for j in P) >= 1, name=f'F{i}_sendsFood_Pj') for i in F}
-    Pj_receiveFood_Fi = {model.addConstr(gp.quicksum(x_ij[i, j] for i in F) <= 1, name=f'P{j}_receiveFood_Fi') for j in P}
-    Pj_sendsFood_Zk = {model.addConstr(gp.quicksum(y_jk[j, k] for k in Z) <= 1, name=f'P{j}_sendsFood_Zk') for j in P}
-    Zk_receiveFood_Pj = {model.addConstr(gp.quicksum(y_jk[j, k] for j in P) >= 1, name=f'Z{k}_receiveFood_Pj') for k in Z}
+# ##CONSTRAINTS##:
 
-    Fi_sendsFood_Pj_TruckCapacity = {model.addConstr(aFP_ij[i, j] <= x_ij[i, j]*cP_j.loc[j].values[0]) for i in F for j in P}
-    FoodBankCapacity = {model.addConstr(gp.quicksum(aFP_ij[i, j] for j in P) <= cF_i.loc[i].values[0]) for i in F}
-    Truck_available = {model.addConstr(gp.quicksum(nT_ij[i,j] for j in P) <= NT_i.loc[i].values[0]) for i in F}
+Fi_sendsFood_Pj = {model.addConstr(gp.quicksum(x_ij[i,j] for j in P) >= 1, name=f'F{i}_sendsFood_Pj') for i in F}
+Pj_receiveFood_Fi = {model.addConstr(gp.quicksum(x_ij[i,j] for i in F) <= 1, name=f'P{j}_receiveFood_Fi') for j in P}
+Pj_sendsFood_Zk = {model.addConstr(gp.quicksum(y_jk[j,k] for k in Z) <= 1, name=f'P{j}_sendsFood_Zk') for j in P}
+Zk_receiveFood_Pj = {model.addConstr(gp.quicksum(y_jk[j,k] for j in P) >= 1, name=f'Z{k}_receiveFood_Pj') for k in Z}
 
-    FoodGet_FoodSent = {model.addConstr(gp.quicksum(aFP_ij[i, j] for i in F) == gp.quicksum(aPZ_jk[j, k] for k in Z)) for j in P} 
-    Food_sent_capacity = {model.addConstr(nT_ij[i,j]*TC >= aFP_ij[i,j]) for i in F for j in P}
+Fi_sendsFood_Pj_TruckCapacity = {model.addConstr(aFP_ij[i,j] <= x_ij[i,j]*cP_j.loc[j].values[0]) for i in F for j in P}
+FoodBankCapacity = {model.addConstr(gp.quicksum(aFP_ij[i,j] for j in P) <= cF_i.loc[i].values[0]) for i in F}
+Truck_available = {model.addConstr(gp.quicksum(nT_ij[i,j] for j in P) <= NT_i.loc[i].values[0]) for i in F}
 
-    FoodDemand = {model.addConstr(gp.quicksum(aPZ_jk[j, k] for j in P) >= y_jk[j,k]*AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_ij[i,j] for i in F)) for j in P for k in Z}
-    #FoodDemand = {model.addConstr(gp.quicksum(aPZ_jk[j, k]*fFP_ij[i,j] for i in F for j in P) >= y_jk[j,k]*AFP_PF_pZ_k.loc[k].values[0]*T_hours) for j in P for k in Z}
+FoodGet_FoodSent = {model.addConstr(gp.quicksum(aFP_ij[i,j] for i in F) == gp.quicksum(aPZ_jk[j,k] for k in Z)) for j in P} 
+Food_sent_capacity = {model.addConstr(nT_ij[i,j]*TC >= aFP_ij[i,j]) for i in F for j in P}
 
-    UnloadingTime = {model.addConstr(ut_ij[i, j] == (UR+SR)*aFP_ij[i, j]) for i in F for j in P}
+UnloadingTime = {model.addConstr(ut_ij[i, j] == (UR+SR)*aFP_ij[i, j]) for i in F for j in P}
 
-    DeprivationTime = {model.addConstr(AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_ij[i,j] for i in F)*y_jk[j,k] == AFP_PF_pZ_k.loc[k].values[0]*dt_jk[j,k]+ aPZ_jk[j,k]) for j in P for k in Z }
-    DeprivationTime3 = {model.addConstr(dt_jk[j,k] >= gp.quicksum(ut_ij[i,j]*y_jk[j,k] for i in F) + wt_jk.loc[j,k]*y_jk[j,k]) for j in P for k in Z }
+OrderPlacedTime = {model.addConstr(opt_ij[i,j] + 2*tt_ij.loc[i,j]*x_ij[i,j] + (1/7)*ut_ij[i,j] == ort_ij[i,j]) for i in F for j in P}
 
-    OrderPlacedTime = {model.addConstr(opt_ij[i,j] + 2*tt_ij.loc[i,j]*x_ij[i,j] + (1/7)*ut_ij[i,j] == ort_ij[i,j]) for i in F for j in P}
-    PlaningTime = {model.addConstr(ort_ij[i,j]*fFP_ij[i,j] >= T_hours*x_ij[i,j]) for i in F for j in P} 
-    
-    DeprivationTime2 = {model.addConstr(dt_jk[j,k] <= M_T*y_jk[j,k]) for j in P for k in Z }
-    new1 = {model.addConstr(aPZ_jk[j, k] <= M_Z*y_jk[j,k]) for j in P for k in Z}
-    new6 = {model.addConstr(ort_ij[i,j] <= M_T*x_ij[i,j]) for i in F for j in P}
-    new5 = {model.addConstr(fFP_ij[i,j] <= M_T*nT_ij[i,j]) for i in F for j in P}
-    new7 = {model.addConstr(opt_ij[i,j] <= M_T*x_ij[i,j]) for i in F for j in P}
-    new8 = {model.addConstr(nT_ij[i,j] <= x_ij[i,j]*NT_i.loc[i].values[0]) for i in F for j in P}
+#FoodDemand = {model.addConstr(gp.quicksum(aPZ_jk[j,k] for j in P) >= AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_ij[i,j]*y_jk[j,k] for i in F)) for j in P for k in Z}
+#DeprivationTime = {model.addConstr(AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_ij[i,j]*y_jk[j,k] for i in F) == AFP_PF_pZ_k.loc[k].values[0]*dt_jk[j,k]+ aPZ_jk[j,k]) for j in P for k in Z }
+FoodDemand = {model.addConstr(gp.quicksum(aPZ_jk[j,k] for j in P) >= AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_y_ijk[i,j,k] for i in F)) for j in P for k in Z}
+DeprivationTime = {model.addConstr(AFP_PF_pZ_k.loc[k].values[0]*gp.quicksum(ort_y_ijk[i,j,k] for i in F) == AFP_PF_pZ_k.loc[k].values[0]*dt_jk[j,k]+ aPZ_jk[j,k]) for j in P for k in Z }
+ort_y_ijk_const = {model.addConstr(ort_y_ijk[i,j,k] <= M_T*y_jk[j,k]) for i in F for j in P for k in Z}
+ort_y_ijk_const2 = {model.addConstr(ort_y_ijk[i,j,k] <= ort_ij[i,j]) for i in F for j in P for k in Z}
+ort_y_ijk_const3 = {model.addConstr(ort_y_ijk[i,j,k] >= ort_ij[i,j] - M_T*(1-y_jk[j,k])) for i in F for j in P for k in Z}
+ort_y_ijk_const4 = {model.addConstr(ort_y_ijk[i,j,k] >= 0) for i in F for j in P for k in Z}
 
-    #dt_k_total = {model.addConstr(dt_k[k] >= dt_jk[j,k]) for j in P for k in Z}
-    #dt_ijk_total = {model.addConstr(dt_ijk[i,j,k] >= dt_k[k] * fFP_ij[i,j]) for i in F for j in P for k in Z}
-    
-    dtt_k_total = {model.addConstr(dtt_k[k] >= dt_jk[j,k]*fFP_ij[i,j]) for i in F for j in P for k in Z}
-    #dt_k_total = {model.addConstr(dtt_k[k] >= dt_k[k]*fFP_ij[i,j]) for i in F for j in P for k in Z}
-    dt_k_total = {model.addConstr(dt_k[k] >= dt_jk[j,k]) for j in P for k in Z}
+#DeprivationTime3 = {model.addConstr(dt_jk[j,k] >= gp.quicksum(ut_ij[i,j]*y_jk[j,k] for i in F) + wt_jk.loc[j,k]*y_jk[j,k]) for j in P for k in Z }
+DeprivationTime3 = {model.addConstr(dt_jk[j,k] >= gp.quicksum(ut_y_ijk[i,j,k] for i in F) + wt_jk.loc[j,k]*y_jk[j,k]) for j in P for k in Z }
+ut_y_ijk_const = {model.addConstr(ut_y_ijk[i,j,k] <= M_T*y_jk[j,k]) for i in F for j in P for k in Z}
+ut_y_ijk_const2 = {model.addConstr(ut_y_ijk[i,j,k] <= ut_ij[i,j]) for i in F for j in P for k in Z}
+ut_y_ijk_const3 = {model.addConstr(ut_y_ijk[i,j,k] >= ut_ij[i,j] - M_T*(1-y_jk[j,k])) for i in F for j in P for k in Z}
+ut_y_ijk_const4 = {model.addConstr(ut_y_ijk[i,j,k] >= 0) for i in F for j in P for k in Z}
 
-    # ##OBJECTIVE FUNCTION##:
-    ER = 1/2000 # Exchange Rate USD to COP Base on the paper Discrete choice Cantillo et al. (2018)
-    dFP_ij_LCM_LCH_TS = 2*dFP_ij*(LCM+(LCH/TS))
-    UR_LCH = (UR+LR+SR)*LCH #(7/6*UR)*LCH
+PlaningTime = {model.addConstr(ort_ij[i,j]*fFP_ij[i,j] >= T_hours*x_ij[i,j]) for i in F for j in P}
+#PlaningTime = {model.addConstr(ort_fFP_ij[i,j] >= T_hours*x_ij[i,j]) for i in F for j in P}
+#ort_fFP_ij1_const = {model.addConstr(ort_fFP_ij1[i,j] == 0.5*(ort_ij[i,j] + fFP_ij[i,j])) for i in F for j in P}
+#ort_fFP_ij2_const = {model.addConstr(ort_fFP_ij2[i,j] == 0.5*(ort_ij[i,j] - fFP_ij[i,j])) for i in F for j in P}
+#ort_fFP_ij_const = {model.addConstr(ort_fFP_ij[i,j] == ort_fFP_ij1[i,j]**2 - ort_fFP_ij2[i,j]**2) for i in F for j in P}
 
-    #dep_cost_const = model.addConstr(dep_cost == gp.quicksum(pZ_k.loc[k].values[0]*PF*dtt_k[k]*ER*(3066 + 349.66*dt_k[k]) for k in Z))
-    dep_cost_const = model.addConstr(dep_cost == gp.quicksum(pZ_k.loc[k].values[0]*PF*dtt_k[k]*(0.05) for k in Z))
-    log_cost_const = model.addConstr(log_cost == gp.quicksum(fFP_ij[i,j]*(nT_ij[i,j]*dFP_ij_LCM_LCH_TS.loc[i,j] + UR_LCH*aFP_ij[i,j]) for i in F for j in P))
-    #obj = dep_cost + log_cost
-    
-    model.setObjective(dep_cost + log_cost, 
-                       gp.GRB.MINIMIZE)
-    model.setParam('Presolve', 2) #to reduce the model size and tighten it further, if possible
-    model.setParam('NodefileStart', 0.5) #to avoid exhausts memory
-    model.setParam('Threads', 30) #to avoid exhausts memory
-    model.setParam('PreSparsify', 1) #This reduction can sometimes significantly reduce the number of non-zero values in the presolved model
-    model.setParam('MIPFocus', 1)#to focus on finding a feasible solution
-    model.setParam('Cuts', 2)#Use value 0 to shut off cuts, 1 for moderate cut generation, 2 for aggressive cut generation, and 3 for very aggressive cut generation. The default -1 value chooses automatically.
-    #model.update()
-    #model.update()
-    #Optimize (solve the model)
-    model.optimize()
-    #model.computeIIS()
-    #model.write("model.ilp")
-    #model.write('FoodBank_Final.lp')
-    model.write('FoodBank_Final_Lineal.sol')
+new0 = {model.addConstr(dt_jk[j,k] <= M_T*y_jk[j,k]) for j in P for k in Z }
+new1 = {model.addConstr(aPZ_jk[j,k] <= cP_j.loc[j].values[0]*y_jk[j,k]) for j in P for k in Z}
+new3 = {model.addConstr(ut_ij[i,j] <= M_T*x_ij[i,j]) for i in F for j in P}
+new6 = {model.addConstr(ort_ij[i,j] <= M_T*x_ij[i,j]) for i in F for j in P}
+new5 = {model.addConstr(fFP_ij[i,j] <= M_T*nT_ij[i,j]) for i in F for j in P}
+new7 = {model.addConstr(opt_ij[i,j] <= M_T*x_ij[i,j]) for i in F for j in P}
+new8 = {model.addConstr(nT_ij[i,j] <= NT_i.loc[i].values[0]*x_ij[i,j]) for i in F for j in P}
 
+dt_k_total = {model.addConstr(dt_k[k] >= dt_jk[j,k]) for j in P for k in Z}
+dtt_k_total = {model.addConstr(dtt_k[k] >= dt_k[k]*fFP_ij[i,j]) for i in F for j in P for k in Z}
+
+# ##OBJECTIVE FUNCTION##:
+ER = 1/2000 # Exchange Rate USD to COP Base on the paper Discrete choice Cantillo et al. (2018)
+dFP_ij_LCM_LCH_TS = 2*dFP_ij*(LCM+(LCH/TS))
+UR_LCH = (UR+LR+SR)*LCH #(7/6*UR)*LCH
+
+dep_cost_const = model.addConstr(dep_cost == gp.quicksum(pZ_k.loc[k].values[0]*PF*dtt_k[k]*ER*(3066 + 349.66*dt_k[k]) for k in Z))
+#dep_cost_const = model.addConstr(dep_cost == gp.quicksum(pZ_k.loc[k].values[0]*PF*dtt_k[k]*(0.05) for k in Z))
+log_cost_const = model.addConstr(log_cost == gp.quicksum(fFP_ij[i,j]*(nT_ij[i,j]*dFP_ij_LCM_LCH_TS.loc[i,j] + UR_LCH*aFP_ij[i,j]) for i in F for j in P))
+#obj = dep_cost + log_cost
+
+model.setObjective(dep_cost + log_cost, 
+                    gp.GRB.MINIMIZE)
+#model.setParam('Presolve', 2) #to reduce the model size and tighten it further, if possible
+model.setParam('NodefileStart', 0.5) #to avoid exhausts memory
+model.setParam('Threads', 30) #to avoid exhausts memory
+#model.setParam('PreSparsify', 1) #This reduction can sometimes significantly reduce the number of non-zero values in the presolved model
+model.setParam('MIPFocus', 1)#to focus on finding a feasible solution
+model.setParam('Cuts', 3)#Use value 0 to shut off cuts, 1 for moderate cut generation, 2 for aggressive cut generation, and 3 for very aggressive cut generation. The default -1 value chooses automatically.
+#model.update()
+#Optimize (solve the model)
+model.optimize()
+#model.computeIIS()
+#model.write("model.ilp")
+#model.write('FoodBank_Final.lp')
+model.write('FoodBank_PMN-ZMF-PF01_NoLineal.sol')
 
 FBLocation_file = pd.read_excel(pd.ExcelFile(data_path), sheet_name='FB-LOCATION', index_col=0)
 FBLocation_i = FBLocation_file.iloc[:,0:4]
@@ -417,4 +430,5 @@ for coords in FP_noSol:
 
     nFP_noSol += 1
 
-m.save('map_small5.html')
+m.save('FoodBank_PMN-ZMF-PF01_NoLineal.html')
+
