@@ -1,0 +1,6 @@
+
+Gurobi 11.0.0 (linux64, Python) logging started Fri May 31 11:13:00 2024
+
+Set parameter ServerPassword
+Set parameter TokenServer to value "odan-urr.sens.buffalo.edu"
+Set parameter LogFile to value "gurobi.log"
