@@ -39,10 +39,6 @@ This research investigates the optimal location decisions in a food distribution
    git clone https://github.com/your-username/Food_Bank_POD_Planning.git
    cd Food_Bank_POD_Planning
    ```
-2. Run the optimization model:
-   ```bash
-   python models/food_bank_optimization.py
-   ```
 
 ## 📊 Results & Insights
 
