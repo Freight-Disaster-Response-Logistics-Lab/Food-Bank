@@ -19,7 +19,6 @@ This research investigates the optimal location decisions in a food distribution
 - `models/` - Python scripts for running the optimization model.
 - `results/` - Output results, including optimal POD locations and shipment schedules.
 - `notebooks/` - Jupyter notebooks for data preprocessing and analysis.
-- `docs/` - Additional documentation and references.
 
 ## 🚀 Installation & Usage
 
