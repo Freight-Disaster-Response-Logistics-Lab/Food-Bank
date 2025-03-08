@@ -1,0 +1,32 @@
+\ Model Food_Bank_copy
+\ LP format - for model browsing. Use MPS format to capture full model detail.
+Minimize
+ 
+Subject To
+ Z28_receiveFood_Pj: y_199_28 + y_198_28 + y_202_28 + y_47_28 + y_197_28
+   >= 1
+ qc0: - 0.496 y_199_28 + dt_start_28 + [ - y_199_28 * ut_1_199
+   - y_198_28 * ut_1_198 - y_202_28 * ut_1_202 - y_47_28 * ut_1_47
+   - y_197_28 * ut_1_197 ] = 0
+ qc1: - 0.304 y_198_28 + dt_start_28 + [ - y_199_28 * ut_1_199
+   - y_198_28 * ut_1_198 - y_202_28 * ut_1_202 - y_47_28 * ut_1_47
+   - y_197_28 * ut_1_197 ] = 0
+ qc2: - 0.392 y_202_28 + dt_start_28 + [ - y_199_28 * ut_1_199
+   - y_198_28 * ut_1_198 - y_202_28 * ut_1_202 - y_47_28 * ut_1_47
+   - y_197_28 * ut_1_197 ] = 0
+ qc3: - 0.392 y_47_28 + dt_start_28 + [ - y_199_28 * ut_1_199
+   - y_198_28 * ut_1_198 - y_202_28 * ut_1_202 - y_47_28 * ut_1_47
+   - y_197_28 * ut_1_197 ] = 0
+ qc4: - 0.368 y_197_28 + dt_start_28 + [ - y_199_28 * ut_1_199
+   - y_198_28 * ut_1_198 - y_202_28 * ut_1_202 - y_47_28 * ut_1_47
+   - y_197_28 * ut_1_197 ] = 0
+Bounds
+ ut_1_199 free
+ ut_1_198 free
+ ut_1_202 free
+ ut_1_47 free
+ ut_1_197 free
+ dt_start_28 free
+Binaries
+ y_199_28 y_198_28 y_202_28 y_47_28 y_197_28
+End
