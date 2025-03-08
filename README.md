@@ -36,8 +36,8 @@ This research investigates the optimal location decisions in a food distribution
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/Food_Bank_POD_Planning.git
-   cd Food_Bank_POD_Planning
+   git clone https://github.com/Freight-Disaster-Response-Logistics-Lab/Food-Bank.git
+   cd Food-Bank
    ```
 
 ## 📊 Results & Insights
